@@ -1,0 +1,135 @@
+<?php
+require_once '../login.php';
+require_once '../honoka_format.php';
+function error_mysql($log_mes){
+        $error_title = "MYSQL ERROR";
+        echo_error_box($error_title, $log_mes);
+        error_log($log_mes);
+echo <<< _TABLE
+</div>
+_TABLE;
+echo_footer();
+honoka_end();
+exit(1);
+}
+
+honoka_head_top("VIEWER");
+honoka_css();
+honoka_head_end();
+honoka_head_menu(-1);
+echo <<< _VIEWER
+<div class="container lined pad-end">
+      <div class="col-lg-12">
+        <div class="page-header">
+       <section>
+          <h1 id="type">Viewer</h1>
+        </section>
+        </div>
+      </div>
+_VIEWER;
+
+if(isset($_GET['id'])){
+$link = mysql_connect($db_hostname, $db_username, $db_password);
+if (!$link) {
+    error_mysql('接続失敗です。'.mysql_error());
+	exit(1);
+}
+$db_selected = mysql_select_db($db_database, $link);
+if (!$db_selected){
+    error_mysql('データベース選択失敗です。'.mysql_error());
+	exit(1);
+}
+
+//mysql_set_charset('utf8');
+$query = "SELECT * FROM $db_table WHERE No =".$_GET['id'];
+$result = mysql_query($query);
+if (!$result) {
+    error_mysql('クエリーが失敗しました。'.mysql_error());
+	exit(1);
+}
+$row = mysql_fetch_assoc($result);
+
+	$path = "../data/".$_GET['id']."/".$_GET['id'].".ply";
+	if(is_readable($path)){
+		echo <<< _END2
+    <div>
+_END2;
+    print('
+      <div class="col-lg-3"><p>投稿日時：'.$row['Timestamp'].'</p></div>');
+    print('<div class="col-lg-9"><p>投稿者：'.$row['UserName'].'</p></div>');
+echo <<< _END2
+    </div>
+<div>
+
+_END2;
+echo <<< _END2
+		<div class = "col-md-8" id="CanvasCol">
+_END2;
+    print('<h3>'.$row['Title'].'</h3>');
+echo <<< _END2
+<div class = "box"><canvas id="canvas"></canvas></div>
+
+</div>
+      <div class="col-lg-4 page-header">
+          <h3>Comment</h3>
+_END2;
+print('<p>'.$row['Comment'].'</p>');
+echo <<< _END2
+</div>
+<div class="pad-end"></div>
+      <div class="col-lg-4"><h5>[スクロール(ピンチイン・アウト)]：拡大縮小</h5></div>
+      <div class="col-lg-4"><h5>[ドラッグ(1本指スライド)]：回転</h5></div>
+      <div class="col-lg-4"><h5>[右クリック+ドラッグ(2本指スライド)]：位置移動</h5></div>
+</div>
+</div>
+<script src="../js/pc_viewer.js" type="text/javascript"></script>
+<script src="../js/three.min.js"></script>
+<script src="../js/PLYLoader.js"></script>
+<script src="../js/TrackballControls.js"></script>
+
+_END2;
+	}
+	else {
+		$error_mes =  "ID=".$_GET['id']."の点群データは存在しません.<br/>";
+                if($row){
+                        switch($row['Flag']){
+                        case 0: $error_num = 404;
+				$error_mes = $error_mes. "アップロード中です.<br/>変換終了までしばらくお待ちください.";
+				break;
+                        case 1: $error_num = 404;
+				$error_mes = $error_mes. "このデータは変換待機中です.<br/>変換終了までしばらくお待ちください.";
+				break;
+                        case 2: $error_num = 404;
+				$error_mes = $error_mes. "このデータは変換中です.<br/>変換終了までしばらくお待ちください.";
+				break;
+                        case 3: $error_num = 500;
+				$error_mes = $error_mes. "サーバエラーの可能性があります.<br/>管理者に問い合わせてください.";
+				break;
+                        case 4: $error_num = 404;
+				$error_num = $error_mes = $error_mes. "このデータは削除済みです.";
+				break;
+                        }
+                }
+                else{
+			$error_num = 404;
+                }
+		
+		echo_error_box("$error_num ERROR", $error_mes);
+	}
+}
+else {
+echo_error_box("ERROR", "IDが指定されていません");
+echo_footer();
+honoka_end();
+exit(1);
+}
+$close_flag = mysql_close($link);
+
+if (!$close_flag){
+    error_mysql('切断に失敗です。');
+}
+
+echo_footer();
+honoka_end();
+?>
+
